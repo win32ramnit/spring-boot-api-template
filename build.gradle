@@ -1,0 +1,57 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
+//	id 'org.sonarqube'
+}
+
+
+apply from: 'properties.gradle' // Apply the properties file
+
+group = 'com.demo'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21) // Use Java 21 toolchain
+    }
+}
+//sourceCompatibility = JavaVersion.VERSION_25 // Set source compatibility to Java 25
+//targetCompatibility = JavaVersion.VERSION_25 // Set target compatibility to Java 25
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+    configureEach {
+//        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+//        exclude group: 'org.slf4j', module: 'slf4j-log4j2'
+//		exclude group: 'com.squareup.okio', module: 'okio'
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+//    options.incremental(true)
+    options.compilerArgs += ['-Xlint']
+}
+
+bootJar {
+    archiveFileName = 'my-application.jar'
+}
+
+springBoot {
+    buildInfo()
+}

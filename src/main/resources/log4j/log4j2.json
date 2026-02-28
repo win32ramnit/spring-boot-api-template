@@ -1,0 +1,90 @@
+{
+  "configuration": {
+    "name": "Project-template-configuration",
+    "status": "WARN",
+    "packages": "com.demo",
+    "appender": {
+      "Console": {
+        "name": "Console",
+        "type": "Console",
+        "target": "SYSTEM_OUT",
+        "patternLayout": {
+          "pattern": "%X{mcdData} - %d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"
+        },
+        "filters": [
+          {
+            "type": "ThresholdFilter",
+            "level": "info",
+            "onMatch": "ACCEPT",
+            "onMismatch": "DENY"
+          }
+        ]
+      },
+      "RollingFile": {
+        "name": "File",
+        "type": "RollingFile",
+        "fileName": "logs/app.log",
+        "filePattern": "logs/app-%d{yyyy-MM-dd}-%i.log",
+        "patternLayout": {
+          "pattern": "%X{mcdData} - %d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"
+        },
+        "append": true,
+        "immediateFlush": true,
+        "policies": {
+          "sizeBasedTriggeringPolicy": {
+            "size": "10MB"
+          },
+          "cronTriggeringPolicy": {
+            "schedule": "0 0 0/12 * * ?"
+          },
+          "filters": [
+            {
+              "type": "ThresholdFilter",
+              "level": "info",
+              "onMatch": "ACCEPT",
+              "onMismatch": "DENY"
+            }
+          ]
+        }
+      }
+    },
+    "loggers": {
+      "logger": [
+        {
+          "name": "com.demo",
+          "level": "INFO",
+          "additivity": false,
+          "appenderRefs": [
+            { "ref": "Console" },
+            { "ref": "File" }
+          ]
+        },
+        {
+          "name": "org.springframework",
+          "level": "INFO",
+          "additivity": false,
+          "appenderRefs": [
+            { "ref": "Console" },
+            { "ref": "File" }
+          ]
+        },
+        {
+          "name": "org.hibernate",
+          "level": "INFO",
+          "additivity": false,
+          "appenderRefs": [
+            { "ref": "Console" },
+            { "ref": "File" }
+          ]
+        }
+      ],
+      "root": {
+        "level": "INFO",
+        "appenderRefs": [
+          { "ref": "Console" },
+          { "ref": "File" }
+        ]
+      }
+    }
+  }
+}
