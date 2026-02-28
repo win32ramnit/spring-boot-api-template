@@ -72,6 +72,7 @@ public class RequestBodyInterceptor implements RequestBodyAdvice {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void sanitizeMap(Map<String, Object> jsonMap) {
     jsonMap.forEach((key, value) -> {
       if (value instanceof String) {
@@ -84,6 +85,7 @@ public class RequestBodyInterceptor implements RequestBodyAdvice {
     });
   }
 
+  @SuppressWarnings("unchecked")
   private void sanitizeList(List<Object> list) {
     for (int i = 0; i < list.size(); i++) {
       Object value = list.get(i);
