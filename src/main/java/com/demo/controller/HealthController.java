@@ -1,34 +1,47 @@
 package com.demo.controller;
 
-import com.demo.response.ServiceResponse;
-import com.demo.constant.AppResponseStatus;
+import com.demo.dto.ApiResponse;
+import com.demo.util.ApiResponseUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.info.BuildProperties;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Sample REST controller for health/status endpoints.
- * Replace or extend with your own API controllers.
- */
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
 @RestController
-@RequestMapping("/api/v1")
-@Tag(name = "Health", description = "Health and status API")
+@RequestMapping("${app.api.base-path:/api/v1}")
+@Tag(name = "Health", description = "Health and info endpoints")
+@RequiredArgsConstructor
 public class HealthController {
 
+  private final Optional<BuildProperties> buildProperties;
+
   @GetMapping("/health")
-  @Operation(summary = "Health check", description = "Returns application health status")
-  public ResponseEntity<ServiceResponse> health() {
-    return ResponseEntity.ok(
-        new ServiceResponse(AppResponseStatus.OK, "Application is running"));
+  @Operation(summary = "Health check")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> health(HttpServletRequest request) {
+    Map<String, Object> data = new HashMap<>();
+    data.put("status", "UP");
+    return ResponseEntity.ok(ApiResponseUtil.success(data, request, HttpStatus.OK));
   }
 
   @GetMapping("/info")
-  @Operation(summary = "Application info", description = "Returns basic application information")
-  public ResponseEntity<ServiceResponse> info() {
-    return ResponseEntity.ok(
-        new ServiceResponse(AppResponseStatus.OK, "Spring Boot 4.0 Template - Ready for development"));
+  @Operation(summary = "Application info")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> info(HttpServletRequest request) {
+    Map<String, Object> data = new HashMap<>();
+    buildProperties.ifPresent(props -> {
+      data.put("name", props.getName());
+      data.put("version", props.getVersion());
+      data.put("time", props.getTime());
+    });
+    return ResponseEntity.ok(ApiResponseUtil.success(data, request, HttpStatus.OK));
   }
 }

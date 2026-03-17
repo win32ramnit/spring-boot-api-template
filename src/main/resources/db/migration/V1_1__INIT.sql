@@ -1,8 +1,0 @@
-CREATE TABLE `system_property` (
-    `id` INT NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(255) DEFAULT NULL,
-    `value` VARCHAR(255) DEFAULT NULL,
-    `status` VARCHAR(255) DEFAULT NULL,
-    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY(`id`)
-);

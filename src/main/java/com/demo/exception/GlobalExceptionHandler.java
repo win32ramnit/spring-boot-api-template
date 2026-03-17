@@ -1,90 +1,96 @@
 package com.demo.exception;
 
-import com.demo.constant.AppResponseStatus;
-import com.demo.response.ServiceErrorResponse;
+import com.demo.dto.ApiResponse;
+import com.demo.util.ApiResponseUtil;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.lang3.exception.ExceptionUtils;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-@ControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-  @ExceptionHandler(AppException.class)
-  @ResponseBody
-  public ServiceErrorResponse handleAppException(HttpServletRequest request,
-      HttpServletResponse response, AppException ex) {
-    LOG.error("App Exception Occurred:: URL= {}", request.getRequestURI());
-    LOG.error(" Exception Message Code:: {}", ex.getMessageCode());
-    LOG.error(" Exception Message Desc:: {}", ex.getMessageDesc());
-
-    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-
-    // @formatter:off
-    return ServiceErrorResponse.builder()
-        .status(AppResponseStatus.EXCEPTION)
-        .errorCode(ex.getMessageCode())
-        .description(ex.getMessageDesc())
-        .moreInfo(ex.getMoreInfo())
-        .build();
-    // @formatter:on
+  @ExceptionHandler(ApiException.class)
+  public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException ex,
+      HttpServletRequest request) {
+    ApiResponse<Void> response = ApiResponseUtil.error(request, ex.getStatus(), ex.getCode(),
+        ex.getMessage(), ex.getFieldErrors(), ex.getDetails());
+    return ResponseEntity.status(ex.getStatus()).body(response);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
-  @ResponseBody
-  public ServiceErrorResponse handleValidationException(HttpServletRequest request,
-      HttpServletResponse response, MethodArgumentNotValidException ex) {
-    Map<String, String> errors = new HashMap<>();
+  public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex,
+      HttpServletRequest request) {
+    Map<String, String> fieldErrors = new HashMap<>();
     for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-      errors.put(error.getField(), error.getDefaultMessage());
+      fieldErrors.put(error.getField(), error.getDefaultMessage());
     }
+    ApiResponse<Void> response = ApiResponseUtil.error(request, HttpStatus.BAD_REQUEST,
+        "VALIDATION_FAILED", "Request validation failed", fieldErrors, null);
+    return ResponseEntity.badRequest().body(response);
+  }
 
-    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException ex,
+      HttpServletRequest request) {
+    Map<String, String> fieldErrors = ex.getConstraintViolations().stream()
+        .collect(Collectors.toMap(
+            violation -> violation.getPropertyPath().toString(),
+            ConstraintViolation::getMessage,
+            (existing, replacement) -> existing));
+    ApiResponse<Void> response = ApiResponseUtil.error(request, HttpStatus.BAD_REQUEST,
+        "VALIDATION_FAILED", "Request validation failed", fieldErrors, null);
+    return ResponseEntity.badRequest().body(response);
+  }
 
-    // @formatter:off
-    return ServiceErrorResponse.builder()
-        .status(AppResponseStatus.BAD_REQUEST)
-        .errorCode("VALIDATION-FAILED")
-        .description("Request validation failed")
-        .validationFailed(errors)
-        .build();
-    // @formatter:on
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<ApiResponse<Void>> handleMissingParameter(
+      MissingServletRequestParameterException ex, HttpServletRequest request) {
+    ApiResponse<Void> response = ApiResponseUtil.error(request, HttpStatus.BAD_REQUEST,
+        "MISSING_PARAMETER", ex.getMessage(), null, null);
+    return ResponseEntity.badRequest().body(response);
+  }
+
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ApiResponse<Void>> handleInvalidPayload(HttpMessageNotReadableException ex,
+      HttpServletRequest request) {
+    ApiResponse<Void> response = ApiResponseUtil.error(request, HttpStatus.BAD_REQUEST,
+        "INVALID_PAYLOAD", "Request body is malformed or unreadable", null, null);
+    return ResponseEntity.badRequest().body(response);
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex,
+      HttpServletRequest request) {
+    ApiResponse<Void> response = ApiResponseUtil.error(request, HttpStatus.CONFLICT,
+        "DATA_INTEGRITY_VIOLATION", "Database constraint violated", null, null);
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
   }
 
   @ExceptionHandler(Exception.class)
-  @ResponseBody
-  public ServiceErrorResponse handleException(HttpServletRequest request,
-      HttpServletResponse response, Exception ex) {
-    LOG.info("#################### UNCHECKED EXCEPTION START ####################");
-    LOG.error("Unhandled Exception Occurred:: URL {}", request.getRequestURI(), ex);
-
-    LOG.info("#################### UNCHECKED EXCEPTION START ####################");
-
-    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-
-    // @formatter:off
-    return ServiceErrorResponse.builder()
-        .status(AppResponseStatus.INTERNAL_SERVER_ERROR)
-        .errorCode(ExceptionUtils.getRootCauseMessage(ex))
-        .description(ExceptionUtils.getMessage(ex))
-//        .moreInfo(ExceptionUtils.getStackTrace(ex))
-        .moreInfo(ex.getStackTrace() != null ?
-            String.join("\n", Arrays.stream(ex.getStackTrace()).map(StackTraceElement::toString).toArray(String[]::new))
-            : "N/A")
-        .build();
-    // @formatter:on
+  public ResponseEntity<ApiResponse<Void>> handleException(Exception ex,
+      HttpServletRequest request) {
+    log.error("Unhandled exception", ex);
+    ApiResponse<Void> response = ApiResponseUtil.error(request, HttpStatus.INTERNAL_SERVER_ERROR,
+        "INTERNAL_ERROR", "Unexpected error occurred", null,
+        List.of(ex.getClass().getSimpleName()));
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
   }
-
 }

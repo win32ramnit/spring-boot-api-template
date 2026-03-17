@@ -1,157 +1,246 @@
-# Spring Boot 4.0 Template
+# Spring Boot 4 API Template
 
-A production-ready Spring Boot 4.0.3 template for quickly kickstarting enterprise Java applications. Includes security, API documentation, database migrations, and best-practice configurations out of the box.
+Reusable Spring Boot 4.0.3 + Java 21 starter for building production-ready REST APIs. Includes a clean package structure, consistent response format, profiles, security baseline, OpenAPI docs, and sample CRUD.
 
 ## Features
 
-- **Spring Boot 4.0.3** with Java 21
-- **REST API** with OpenAPI 3 / Swagger UI
-- **Spring Security** – API key authentication for protected endpoints, OAuth2/JWT ready
-- **JPA + Flyway** – MySQL with schema versioning
-- **Actuator** – Health checks and monitoring
-- **Global exception handling** – Consistent error responses
-- **CORS & security headers** – Production-ready defaults
-- **Request validation** – Bean Validation support
-- **Development tools** – DevTools, Lombok
+- Spring Boot 4.0.3, Java 21
+- Standard layered architecture: controller -> service -> repository
+- Consistent API response format
+- Validation + global exception handling
+- API docs with SpringDoc OpenAPI
+- Profiles: `dev`, `test`, `prod`
+- Security baseline: API key (default) or JWT (ready)
+- Request correlation IDs + structured console logging
+- Sample CRUD (Items)
 
 ## Requirements
 
-- **JDK 21** or higher
-- **Gradle 9.x** (wrapper included)
-- **MySQL 8+** (or use H2 for local development)
+- JDK 21+
+- Gradle (wrapper included)
+- MySQL 8+ (dev/prod) or H2 (tests)
 
-## Quick Start
+## Quick Start (Dev)
 
-### 1. Clone and build
+1. Configure a local MySQL database:
+
+```
+DB_URL=jdbc:mysql://localhost:3306/template_dev
+DB_USERNAME=root
+DB_PASSWORD=root!
+```
+
+2. Run:
 
 ```bash
-git clone <your-repo-url>
-cd template
-./gradlew build
+./scripts/run-local.sh
 ```
 
-### 2. Configure database
+Windows:
 
-Create a MySQL database and update `src/main/resources/application.properties`:
-
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/your_database
-spring.datasource.username=your_user
-spring.datasource.password=your_password
+```powershell
+.\scripts\run-local.ps1
 ```
 
-### 3. Run the application
+Or:
 
 ```bash
 ./gradlew bootRun
 ```
 
-Or run the JAR:
+## Profiles
+
+- `dev`: local development defaults, SQL logging enabled
+- `test`: H2 in-memory, Flyway disabled
+- `prod`: production defaults, security enabled
+
+Activate a profile:
 
 ```bash
-java -jar build/libs/my-application.jar
+SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun
 ```
 
-### 4. Verify
+## Base URL
 
-- **Application:** http://localhost:1947/template
-- **Health API:** http://localhost:1947/template/api/v1/health
-- **Swagger UI:** http://localhost:1947/template/swagger-ui.html
-- **Actuator:** http://localhost:9000/actuator (health, info, etc.)
+Default app URL: `http://localhost:8080`  
+Base path: `/api/v1`
+
+## Swagger and OpenAPI
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+## API Endpoints (Full URLs)
+
+- `GET http://localhost:8080/api/v1/health`
+- `GET http://localhost:8080/api/v1/info`
+- `POST http://localhost:8080/api/v1/items`
+- `GET http://localhost:8080/api/v1/items/{id}`
+- `GET http://localhost:8080/api/v1/items`
+- `PUT http://localhost:8080/api/v1/items/{id}`
+- `DELETE http://localhost:8080/api/v1/items/{id}`
+
+## Sample Requests
+
+Create item:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/items \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Sample Item\",\"description\":\"Created via curl\"}"
+```
+
+Get item:
+
+```bash
+curl http://localhost:8080/api/v1/items/1
+```
+
+## Response Format
+
+```json
+{
+  "timestamp": "2026-03-17T12:34:56.789Z",
+  "path": "/api/v1/items/1",
+  "requestId": "c8fdd5dd-1e7b-4f1e-9f4f-8a6e9f9c1a7c",
+  "status": 200,
+  "data": {
+    "id": 1,
+    "name": "Sample Item",
+    "description": "Created via test",
+    "status": "ACTIVE",
+    "createdAt": "2026-03-17T12:34:56.789Z",
+    "updatedAt": "2026-03-17T12:34:56.789Z"
+  }
+}
+```
+
+Errors:
+
+```json
+{
+  "timestamp": "2026-03-17T12:34:56.789Z",
+  "path": "/api/v1/items/999",
+  "requestId": "c8fdd5dd-1e7b-4f1e-9f4f-8a6e9f9c1a7c",
+  "status": 404,
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "Item not found: 999"
+  }
+}
+```
+
+## Security
+
+Enable API key auth (default in `prod`):
+
+```
+SECURITY_ENABLED=true
+API_KEY_ENABLED=true
+API_KEY_HEADER=X-API-KEY
+API_KEY_VALUE=change-me
+```
+
+Example call with API key:
+
+```bash
+curl -H "X-API-KEY: change-me" http://localhost:8080/api/v1/items
+```
+
+Enable JWT:
+
+```
+SECURITY_ENABLED=true
+API_KEY_ENABLED=false
+JWT_ENABLED=true
+JWT_ISSUER_URI=https://issuer.example.com/realms/demo
+```
+
+JWT without issuer (local/dev options):
+
+Option A: JWKS endpoint:
+
+```
+SECURITY_ENABLED=true
+API_KEY_ENABLED=false
+JWT_ENABLED=true
+JWT_JWK_SET_URI=https://issuer.example.com/realms/demo/protocol/openid-connect/certs
+```
+
+Option B: HMAC secret (HS256, dev only):
+
+```
+SECURITY_ENABLED=true
+API_KEY_ENABLED=false
+JWT_ENABLED=true
+JWT_HMAC_SECRET=dev-secret-1234567890-1234567890-1234
+```
+
+Generate a dev token (PowerShell):
+
+```powershell
+.\scripts\jwt-hs256.ps1 -Secret "dev-secret-1234567890-1234567890-1234" -Subject "user1" -TtlMinutes 60
+```
+
+Note: HS256 requires a secret length of at least 32 characters (256 bits). Shorter secrets will fail.
+
+When JWT is enabled, call APIs with:
+
+```
+Authorization: Bearer <jwt-token>
+```
+
+Production recommendation: use `JWT_ISSUER_URI` or `JWT_JWK_SET_URI` (RS256/ES256). Avoid HMAC in production.
+
+Note: Set exactly one of `JWT_ISSUER_URI`, `JWT_JWK_SET_URI`, or `JWT_HMAC_SECRET`.
+
+## Actuator
+
+- Base URL: `http://localhost:9000/actuator`
+- Exposed by default: `health`, `info`, `metrics`, `prometheus`
 
 ## Project Structure
 
 ```
-template/
-├── src/
-│   ├── main/
-│   │   ├── java/com/demo/
-│   │   │   ├── DemoApplication.java          # Main entry point
-│   │   │   ├── controller/                    # REST controllers
-│   │   │   ├── config/                        # Configuration, filters, security
-│   │   │   ├── constant/                      # Enums, constants
-│   │   │   ├── exception/                     # Exception handling
-│   │   │   ├── model/                         # JPA entities
-│   │   │   ├── repository/                    # JPA repositories
-│   │   │   ├── request/                       # Request DTOs
-│   │   │   └── response/                      # Response DTOs
-│   │   └── resources/
-│   │       ├── application.properties
-│   │       ├── db/migration/                  # Flyway migrations
-│   │       └── log4j/                         # Optional Log4j2 config
-│   └── test/
-│       ├── java/                              # Unit & integration tests
-│       └── resources/
-│           └── application.properties         # Test profile (H2)
-├── build.gradle
-├── properties.gradle
-└── settings.gradle
+src/
+  main/
+    java/com/demo/
+      config/          # App properties, security, CORS, OpenAPI
+      controller/      # REST controllers
+      dto/             # Request/response DTOs
+      entity/          # JPA entities
+      exception/       # Custom exceptions + handler
+      filter/          # Correlation ID + request logging
+      repository/      # Spring Data repositories
+      security/        # API key authentication
+      service/         # Business logic
+      util/            # Mappers + response helpers
+    resources/
+      application.yml
+      application-dev.yml
+      application-test.yml
+      application-prod.yml
+      db/migration/
+  test/
+    java/com/demo/
 ```
 
-## Configuration
-
-### Application Properties (`demo.*`)
-
-| Property | Description | Default |
-|----------|-------------|---------|
-| `demo.contentSecurityPolicy` | Content-Security-Policy header | `default-src 'self'` |
-| `demo.allowedOrigins` | CORS allowed origins | `https://example.com` |
-| `demo.excludedUrls` | URL patterns to exclude | `/api/private` |
-| `demo.issuerUri` | JWT issuer URI (OAuth2) | - |
-| `demo.securityHeaderName` | API key header name | `Authorization` |
-| `demo.apiKey` | API key for key-based auth | - |
-
-### Protected vs Public Endpoints
-
-- **Public:** `/api/v1/health`, `/api/v1/info`, `/actuator/**`, `/swagger-ui/**`
-- **Protected** (`/v1/**`): Requires `Authorization` header with valid API key
-
-### Profiles
-
-Set `PROFILE` environment variable to activate profiles (comma-separated):
-
-```bash
-export PROFILE=local,dev
-```
-
-## Dependencies
-
-| Category | Libraries |
-|----------|-----------|
-| Web | Spring Web MVC, WebFlux, Jersey |
-| Data | Spring Data JPA, Flyway |
-| Security | Spring Security, OAuth2 Resource Server |
-| API Docs | SpringDoc OpenAPI |
-| Utilities | Lombok, Commons IO, Commons Lang3, Jsoup |
-| Database | MySQL Connector, H2 (test) |
-
-## Running Tests
-
-Tests use an in-memory H2 database. No MySQL required:
+## Tests
 
 ```bash
 ./gradlew test
 ```
 
-## Customization Guide
+## Build and Run
 
-1. **Add your API endpoints**
-   - Create controllers in `com.demo.controller`
-   - Use `@RestController` and `@RequestMapping`
+```bash
+./gradlew clean build
+java -jar build/libs/template-api.jar
+```
 
-2. **Add entities**
-   - Create JPA entities in `com.demo.model`
-   - Add repositories in `com.demo.repository`
-   - Add Flyway migration in `db/migration/`
+Docker:
 
-3. **Adjust security**
-   - Edit `SecurityConfig.java` for path rules
-   - Configure `KeyAuthFilter` or enable JWT in `SecurityConfig`
-
-4. **Update package**
-   - Replace `com.demo` with your base package
-   - Update `@ComponentScan` in `MvcConfiguration`
-
-## License
-
-MIT or your preferred license.
+```bash
+docker build -t template-api .
+docker run -p 8080:8080 template-api
+```

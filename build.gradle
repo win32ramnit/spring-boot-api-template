@@ -49,7 +49,7 @@ tasks.withType(JavaCompile) {
 }
 
 bootJar {
-    archiveFileName = 'my-application.jar'
+    archiveFileName = 'template-api.jar'
 }
 
 springBoot {

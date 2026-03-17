@@ -1,0 +1,29 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL:?DB_URL is required}
+    username: ${DB_USERNAME:?DB_USERNAME is required}
+    password: ${DB_PASSWORD:?DB_PASSWORD is required}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+logging:
+  level:
+    root: INFO
+    com.demo: INFO
+
+app:
+  logging:
+    http:
+      enabled: false
+  security:
+    enabled: true
+    api-key:
+      enabled: true
+      header: ${API_KEY_HEADER:X-API-KEY}
+      value: ${API_KEY_VALUE:?API_KEY_VALUE is required}
+    jwt:
+      enabled: false
